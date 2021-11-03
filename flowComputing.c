@@ -9,7 +9,6 @@ struct Node {
 	Node* left_child, *right_child;
 };
 
-void print_input_file(char*); // TODO: Maybe delete this function later
 void print_strings_arr(char**, int); // TODO: Delete later
 void print_ints_arr(int**, int); // TODO: Delete later
 Node* create_node(int, Node*, Node*, int);
@@ -17,41 +16,23 @@ char** file_to_strings_arr(char*, int, int);
 int** strings_arr_to_ints_arr(char**, int, int);
 int get_num_vars(char*);
 int get_num_nodes(char*);
-Node* create_bdd(int**, int);
+Node** create_bdd(char*, int);
+void print_bdd(Node**, int);
+void free_bdd(Node**, int);
 void free_strings_arr(char**, int);
 void free_ints_arr(int**, int);
 
 int main() {
-	char* path = "input_files/bdds/var2.bdd";
-	int num_vars = get_num_vars(path);
+	char* path = "input_files/bdds/var5.bdd";
 	int num_nodes = get_num_nodes(path);
-	char** data_strings_arr = file_to_strings_arr(path, num_vars, num_nodes);
-	int** data_ints_arr = strings_arr_to_ints_arr(data_strings_arr, num_vars, num_nodes);
+
+	Node** bdd = create_bdd(path, num_nodes); // Task 1.1
+	print_bdd(bdd, num_nodes); // Task 1.2
+
+	// Free memory	
+	free_bdd(bdd, num_nodes);
 	
-	Node* head = create_bdd(data_ints_arr, num_nodes);
-
-	// Free memory
-	free_strings_arr(data_strings_arr, num_nodes);	
-	free_ints_arr(data_ints_arr, num_nodes);
 	return 0;
-}
-
-// Function that reads and prints the input file
-void print_input_file(char* path) {
-	FILE* fptr;
-	size_t length = 0; // Buffer's length in bytes
-	ssize_t nread; // Variable stores the number of chars read into line
-	char* buffer;
-
-	fptr = fopen(path, "r");
-	if(fptr == NULL) {
-		printf("Error opening File.\n");
-		return;
-	}
-	while ((nread = getline(&buffer, &length, fptr)) != -1) {
-		printf("%s", buffer);
-	}
-	free(buffer);
 }
 
 void print_strings_arr(char** strings_arr, int num_nodes) {
@@ -202,37 +183,70 @@ int get_num_nodes(char* path) {
 	return atoi(num_nodes_str);
 }
 
-Node* create_bdd(int** ints_arr, int num_nodes) {
-	Node* nodes_arr[num_nodes];
+// Function creates and returns the bdd
+Node** create_bdd(char* path, int num_nodes) {
+	int num_vars = get_num_vars(path);
+	char** data_strings_arr = file_to_strings_arr(path, num_vars, num_nodes);
+	int** data_ints_arr = strings_arr_to_ints_arr(data_strings_arr, num_vars, num_nodes);
+	Node** bdd = calloc(num_nodes, sizeof(Node*));
 	int left_child_index = 0;
 	int right_child_index = 0;
 	
 	for(int i = 0; i < num_nodes; i++) {
-		nodes_arr[i] = create_node(ints_arr[i][0], NULL, NULL, ints_arr[i][3]);
+		bdd[i] = create_node(data_ints_arr[i][0], NULL, NULL, data_ints_arr[i][3]);
 	}
 
 	for(int i = 0; i < num_nodes; i++) {
-		left_child_index = ints_arr[i][1] - 1;
-		right_child_index = ints_arr[i][2] - 1;
+		left_child_index = data_ints_arr[i][1] - 1;
+		right_child_index = data_ints_arr[i][2] - 1;
 		if(!(left_child_index < 0)){
-			nodes_arr[i]->left_child = nodes_arr[left_child_index];
-			nodes_arr[i]->right_child = nodes_arr[right_child_index];
+			bdd[i]->left_child = bdd[left_child_index];
+			bdd[i]->right_child = bdd[right_child_index];
 		}
 	}
-	return nodes_arr[0];
+
+	free_strings_arr(data_strings_arr, num_nodes);	
+	free_ints_arr(data_ints_arr, num_nodes);
+	return bdd;
+}
+
+// Function prints the bdd in the same format it was recieved
+void print_bdd(Node** bdd, int num_nodes) {
+	for(int i = 0; i < num_nodes; i++) {
+		printf("%d ", bdd[i]->node_id);
+		if(bdd[i]->left_child != NULL){
+			printf("%d ", bdd[i]->left_child->node_id);
+		} else {
+			printf("-1 ");
+		}
+		if(bdd[i]->right_child != NULL){
+			printf("%d ", bdd[i]->right_child->node_id);
+		} else {
+			printf("-1 ");
+		}
+		printf("%d\n", bdd[i]->decision_id);
+	}
+}
+
+// Function frees the bdd
+void free_bdd(Node** bdd, int num_nodes) {
+	for(int i = 0; i < num_nodes; i++) {
+		free(bdd[i]);
+	}
+	free(bdd);
 }
 
 // Funtion frees the input_data_arr
-void free_strings_arr(char** input_data_arr, int num_vars) {
-	for(int i = 0; i < num_vars; i++) {
+void free_strings_arr(char** input_data_arr, int num_nodes) {
+	for(int i = 0; i < num_nodes; i++) {
 		free(input_data_arr[i]);
 	}
 	free(input_data_arr);
 }
 
 // Funtion frees the input_ints_arr
-void free_ints_arr(int** ints_arr, int num_vars) {
-	for(int i = 0; i < num_vars; i++) {
+void free_ints_arr(int** ints_arr, int num_nodes) {
+	for(int i = 0; i < num_nodes; i++) {
 		free(ints_arr[i]);
 	}
 	free(ints_arr);
