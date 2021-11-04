@@ -9,6 +9,9 @@ struct B_Node {
 	B_Node* left_child, *right_child;
 };
 
+int evaluate_bdd_instance(B_Node*, int*);
+void evaluate_bdd(B_Node*, int*, int);
+void generate_input_instances(int**, int[], int, int);
 void print_ints_arr(int**, int, int);
 B_Node* create_bnode(int, B_Node*, B_Node*, int);
 char** file_to_strings_arr(char*, int, int);
@@ -27,21 +30,86 @@ void free_strings_arr(char**, int);
 void free_ints_arr(int**, int);
 
 int main() {
-	//char* path = "input_files/bdds/var5.bdd";
-	//int num_bnodes = get_num_bnodes(path);
-	//B_Node** bdd = create_bdd(path, num_bnodes); // Task 1.1
-	//print_bdd(bdd, num_bnodes); // Task 1.2
-	// Free memory	
-	//free_bdd(bdd, num_bnodes);
+	char* path = "input_files/bdds/var2.bdd";
+	int num_bnodes = get_num_bnodes(path);
+	B_Node** bdd = create_bdd(path, num_bnodes);
+	//print_bdd(bdd, num_bnodes);
 	
-	char* path = "input_files/xbars/var5.xbar";
-	int num_rows = get_num_rows(path);
-	int num_cols = get_num_cols(path);
-	int** xbar = create_xbar(path, num_rows, num_cols);
-	print_xbar(xbar, num_rows, num_cols);
-	write_xbar_to_file(xbar, num_rows, num_cols);
-	free_ints_arr(xbar, num_rows);
+	int num_vars = 3;
+	int vars[] = {1,0,1};
+	evaluate_bdd(bdd[0], vars, num_vars);
+	
+
+	// Free memory	
+	free_bdd(bdd, num_bnodes);
+	
+//	char* path = "input_files/xbars/var5.xbar";
+//	int num_rows = get_num_rows(path);
+//	int num_cols = get_num_cols(path);
+//	int** xbar = create_xbar(path, num_rows, num_cols);
+//	print_xbar(xbar, num_rows, num_cols);
+//	write_xbar_to_file(xbar, num_rows, num_cols);
+//	free_ints_arr(xbar, num_rows);
 	return 0;
+}
+
+// Function evaluates bdd a single instance of boolean variables
+int evaluate_bdd_instance(B_Node* node, int* vars) {
+	// Base case
+	if(node->left_child == NULL) {
+		return node->decision_id;
+	}
+	// Array index starts at 0, node_id's start at 1. -1 aligns the data
+	int index = node->decision_id - 1;
+	//printf("index = %d\n", index);
+	// Branch towards left child if variable = 0, else branch towards right child (variable = 1)
+	if(vars[index] == 0) {
+		//printf("Going down left branch\n\n");
+		return evaluate_bdd_instance(node->left_child, vars);
+	} else { 
+		//printf("Going down right branch\n\n");
+		return evaluate_bdd_instance(node->right_child, vars);
+	}
+}
+
+// Function evaluates entire truth table for bdd
+void evaluate_bdd(B_Node* node, int* vars, int num_vars) { 
+	int** instances = calloc(8, sizeof(int*));
+	for(int i = 0; i < 8; i++) {
+		instances[i] = calloc(num_vars, sizeof(int));
+	}
+	int arr[num_vars];
+	int* original_address = instances[0];
+	generate_input_instances(instances, arr, num_vars, 0);
+	printf("\n\n");
+	for(int i = 0; i < 8; i++) {
+		printf("address = %p\n", *instances);
+		for(int j = 0; j < num_vars; j++) {
+			printf("%d", instances[i][j]);
+		}
+		printf("\n");
+	}
+}
+
+// Function generates all possible input instances
+void generate_input_instances(int** instances, int arr[], int num_vars, int index) {
+	// Base case
+	if(num_vars == index) {
+		*instances[0] = arr[0];
+		*instances[1] = arr[1];
+		*instances[2] = arr[2];
+		printf("address = %p\n", *instances);
+		for(int j = 0; j < num_vars; j++) {
+			printf("%d", *instances[j]);
+		}
+		printf("\n");
+		*instances++;
+		return;
+	}
+	arr[index] = 0;
+	generate_input_instances(instances, arr, num_vars, index + 1);
+	arr[index] = 1;
+	generate_input_instances(instances, arr, num_vars, index + 1);
 }
 
 // Function prints 2d int arr
@@ -106,7 +174,7 @@ int** strings_arr_to_ints_arr(char** data_strings_arr, int num_rows, int num_col
 	int int_index = 0; // Index to keep track of which int is being worked on 
 	// Loop through each variable
 	for(int i = 0; i < num_rows; i++) {
-		char* original_ptr_location = data_strings_arr[i]; // Used to psoition pointer to its original location
+		char* original_ptr_location = data_strings_arr[i]; // Used to position pointer to its original location
 		// Loop to the end of line
 		while(*data_strings_arr[i] != '\n') { 
 			// Loop until a space is reached
